@@ -242,7 +242,7 @@ const renderButton = () => {
         {renderButton()}
         <div>
           <div className={styles.description}>
-        <a href={`https://rinkeby.rarible.com/collection/${NFT_CONTRACT_ADDRESS}`} target = '_blank'>
+        <a href={`https://rinkeby.rarible.com/collection/${NFT_CONTRACT_ADDRESS}`}>
           <span className={styles.description}>View collection on Rarible</span>
         </a>
         </div>
