@@ -3,7 +3,7 @@ require("dotenv").config({ path: ".env" });
 
 async function main() {
   // URL from where we can extract the metadata for a TAW
-  const metadataURL = "ipfs://QmceCfRwVZSrR4gA6c64njLdktVaWsFuhNUqkUf7m2TB3q/";
+  const metadataURL = "ipfs://QmV3d8bLhTWCCXmg9i5nM5fhgEPKYMvHbXgXkmRrB4RHi2/";
   /*
   A ContractFactory in ethers.js is an abstraction used to deploy new smart contracts,
   so lw3PunksContract here is a factory for instances of our TAW contract.
