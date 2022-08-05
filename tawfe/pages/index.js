@@ -5,7 +5,7 @@ import { ethers, utils} from "ethers";
 import TAW from '../utils/TAW.json';
 
 
-const CONTRACT_ADDRESS = "0x94Ae1F3Aa16A0797912Eb0615bCBa49360Ee2f9D";
+const CONTRACT_ADDRESS = "0x407f9948b15DD536A74895b291789078abD8d33b";
 
 const App = () => {
   const [currentAccount, setCurrentAccount] = useState("");

@@ -4,147 +4,127 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
-// import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "hardhat/console.sol";
+import "../legacy-contracts/ERC721A.sol";
 
-contract TAW is Ownable, ReentrancyGuard, ERC721Enumerable {
+contract TAW is Ownable, ReentrancyGuard, ERC721A {
+
   using Strings for uint256;
 
-  using Counters for Counters.Counter;
- Counters.Counter private _tokenIds;
+  // The next token ID to be minted.
+  uint256 private _currentIndex = 1;
 
   string _baseTokenURI;
 
   //  _price is the price of one The Awakened Woman NFT
-  uint256 public _price = 0.01 ether;
+  uint256 public _price = 0.24 ether;
 
   // _paused is used to pause the contract in case of an emergency
   bool public _paused;
 
   // max number of The Awakened Woman
-  uint256 public maxTokenIds = 5555;
-
-  address nftowner = 0x1920FC6b2f0B4d741e1Bb7e15703f94Cd45C7f36;
+  uint256 public maxSupply = 5555;
 
   mapping(address => uint) myNFT;
-  // event showNFT(address sender, uint256 tokenId);
 
-//   // total number of tokenIds minted
-//   uint256 public tokenIds;
+  address nftowner = 0xAd2a71C0dA7C07df25AF2b62E2915b671c750535;
 
-//   // Address of Contract Owner
-//   address payable owner = 0x1920FC6b2f0B4d741e1Bb7e15703f94Cd45C7f36;
-
+  /// @notice Modifier Used To Restrict Access Of Certain Functions Only To Owner
+  /// @dev Function Caller is checked against the owner of the contract  
   modifier onlyWhenNotPaused {
     require(!_paused, "Contract currently paused");
     _;
   }
 
-    /// @notice Modifier Used To Restrict Access Of Certain Functions Only To Owner
+  
+  /// @notice Modifier Used To Restrict Access Of Certain Functions Only To Owner
   /// @dev Function Caller is checked against the owner of the contract  
-    modifier nftOwner() {
-      require(msg.sender == nftowner, "Only Owner Can Access This Function");
-      _;
+  modifier nftOwner() {
+    require(msg.sender == nftowner, "Only Owner Can Access This Function");
+    _;
+  }
+
+  constructor (string memory baseURI) ERC721A("The Awakened Woman", "TAW") {
+    _baseTokenURI = baseURI;
+  }
+
+   //Returns starting tokenId
+    function _startTokenId() internal view virtual override returns (uint256) {
+        return 1;
     }
 
-        /**
-         * @dev ERC721 constructor takes in a `name` and a `symbol` to the token collection.
-         * name in our case is `The Awakened Woman` and symbol is `TAW`.
-         * Constructor for TAW takes in the baseURI to set _baseTokenURI for the collection.
-         */
-        constructor (string memory baseURI) ERC721("The Awakened Woman", "TAW") {
-            _baseTokenURI = baseURI;
-        }
-
-         function getTokenIdsMinted () external view returns (uint256) {
-        return _tokenIds.current() - 1;
+    /**
+    * @dev setPaused makes the contract paused or unpaused
+    */
+    function setPaused(bool val) public onlyOwner {
+      _paused = val;
     }
 
-        /**
-        * @dev mint allows an user to mint 1 NFT per transaction.
-        */
-        function mint() public payable onlyWhenNotPaused nonReentrant {
-          uint256 newItemId = _tokenIds.current();
-            require(_tokenIds.current() < maxTokenIds, "Exceed maximum TAW supply");
-            require(msg.value >= _price, "Ether sent is not correct");
-            _tokenIds.increment();
-            console.log("An NFT w/ ID %s has been minted to %s", newItemId, msg.sender);
-            
-           _safeMint(msg.sender, newItemId);
-          //  emit showNFT(msg.sender, newItemId);
+    /**
+     * @dev Returns the total amount of tokens minted in the contract.
+     */
+    function _totalMinted() internal view virtual override returns (uint256) {
+      // Counter underflow is impossible as `_currentIndex` does not decrement,
+      // and it is initialized to `_startTokenId()`.
+      unchecked {
+        return _currentIndex - _startTokenId();
+      }
+    }
+
+    /**
+    * @dev _baseURI overides the Openzeppelin's ERC721 implementation which by default
+    * returned an empty string for the baseURI
+    */
+    function _baseURI() internal view virtual override returns (string memory) {
+      return _baseTokenURI;
+    }
+    /**
+    * @dev Returns the total number of tokens in existence.
+    * Burned tokens will reduce the count.
+    * To get the total number of tokens minted, please see {_totalMinted}.
+    */
+    function totalSupply() public view virtual override returns (uint256) {
+      // Counter underflow is impossible as _burnCounter cannot be incremented
+      // more than `_currentIndex - _startTokenId()` times.
+      unchecked {
+        return _currentIndex - _startTokenId();
+      }
+    }
+
+
+    /**
+    * @dev mint allows an user to mint max of 5 NFT.
+    */
+    function mint(uint256 quantity) external payable onlyWhenNotPaused nonReentrant {
+      uint256 newItemId = _currentIndex;
+        require(_currentIndex > totalSupply(), "Exceed maximum TAW supply");
+        require(msg.value >= _price * quantity, "Ether sent is not correct");
+        require(quantity <= 5);       
+        _mint(msg.sender, quantity);
+          _currentIndex += quantity;
           myNFT[msg.sender] = newItemId;
-        }
+    }
 
-        /**
-        * @dev _baseURI overides the Openzeppelin's ERC721 implementation which by default
-        * returned an empty string for the baseURI
-        */
-        function _baseURI() internal view virtual override returns (string memory) {
-            return _baseTokenURI;
-        }
-
-        /**
-        * @dev tokenURI overides the Openzeppelin's ERC721 implementation for tokenURI function
-        * This function returns the URI from where we can extract the metadata for a given tokenId
-        */
-        function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-            require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
-
-            string memory baseURI = _baseURI();
-            // Here it checks if the length of the baseURI is greater than 0, if it is return the baseURI and attach
-            // the tokenId and `.json` to it so that it knows the location of the metadata json file for a given 
-            // tokenId stored on IPFS
-            // If baseURI is empty return an empty string
-            return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString(), ".json")) : "";
-        }
-
-        
-
-        function reserveNFTs() public nftOwner {
-           uint tokenIdsMinted = _tokenIds.current();
-           require(tokenIdsMinted + 100 < maxTokenIds, "Not enough NFTs");
-           for (uint i = 0; i < 100; i++) {
-            mintSingleNFT();
-           }
-
-        }
-
-        function mintSingleNFT() private {
-            uint newTokenId = _tokenIds.current();
-            _safeMint(msg.sender, newTokenId);
-            _tokenIds.increment();
-        }
-
-        // function myNFT() public view returns(string[] memory){
-        //   return showNFT[msg.sender];
-        // }
-        function viewNFT() public view returns(uint) {
+     function viewNFT() public view returns(uint) {
           return myNFT[msg.sender];
         }
 
-        /**
-        * @dev setPaused makes the contract paused or unpaused
-         */
-        function setPaused(bool val) public onlyOwner {
-            _paused = val;
-        }
+    function reserveNFTs() external nftOwner nonReentrant {
+      require(totalSupply() < maxSupply - 100, "Action not completed");
+            
+      _mint(nftowner, 100);
+        _currentIndex += 100;
+    }
 
-        /**
-        * @dev withdraw sends all the ether in the contract 
-        * to the owner of the contract
-         */
-        function withdraw() public nftOwner nonReentrant {
-            address _owner = nftowner;
-            uint256 amount = address(this).balance;
-            (bool sent, ) =  _owner.call{value: amount}("");
-            require(sent, "Failed to send Ether");
-        }
+    function withdraw() public nftOwner nonReentrant {
+      address _owner = nftowner;
+      uint256 amount = address(this).balance;
+      (bool sent, ) =  _owner.call{value: amount}("");
+        require(sent, "Failed to send Ether");
+    }
 
-         // Function to receive Ether. msg.data must be empty
-        receive() external payable {}
+    // Function to receive Ether. msg.data must be empty
+    receive() external payable {}
 
-        // Fallback function is called when msg.data is not empty
-        fallback() external payable {}
+    // Fallback function is called when msg.data is not empty
+    fallback() external payable {}
 }
