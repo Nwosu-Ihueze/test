@@ -3,14 +3,16 @@ import styles from "../styles/Home.module.css";
 // import { NFT_CONTRACT_ADDRESS} from "../constants";
 import { ethers, utils} from "ethers";
 import TAW from '../utils/TAW.json';
+// import LoadingIndicator from '/Components/LoadingIndicator';
 
-
-const CONTRACT_ADDRESS = "0x407f9948b15DD536A74895b291789078abD8d33b";
+const CONTRACT_ADDRESS = "0x720dcBEc20f46eC13e497C380fB02A572D913e77";
+const quantity = 1;
 
 const App = () => {
   const [currentAccount, setCurrentAccount] = useState("");
   const [nftCount, setNftCount] = useState(null);
   const [myMintedNFT, setMintedNFT] = useState(null);
+  const [mintState, setMintState] = useState('');
 
   const checkIfWalletIsConnected = async () => {
     const { ethereum } = window;
@@ -96,8 +98,7 @@ if (chainId !== rinkebyChainId) {
         // If you're familiar with webhooks, it's very similar to that!
         let showNFT = await connectedContract.viewNFT();
         setMintedNFT(showNFT);
-        alert(`Hey there! We've minted your NFT and sent it to your wallet. It may be blank right now. It can take a max of 10 min to show up on OpenSea. Here's the link: https://testnets.opensea.io/assets/${CONTRACT_ADDRESS}/${Number(myMintedNFT)}`)
-
+        
         console.log("Setup event listener!")
        
 
@@ -124,42 +125,55 @@ if (chainId !== rinkebyChainId) {
         const signer = provider.getSigner();
         const connectedContract = new ethers.Contract(CONTRACT_ADDRESS, TAW.abi, signer);
   
+        try {
+        setMintState('mining');
         console.log("Going to pop wallet now to pay gas...")
-        let nftTxn = await connectedContract.mint({
+        let nftTxn = await connectedContract.mint(quantity, {
           value: utils.parseEther("0.01"),
         });
   
         console.log("Mining...please wait.")
         await nftTxn.wait();
+        setMintState('mining');
+
+        alert(`Hey there! We've minted your NFT and sent it to your wallet. It may be blank right now. It can take a max of 10 min to show up on OpenSea. Here's the link: https://testnets.opensea.io/assets/${CONTRACT_ADDRESS}/${Number(myMintedNFT)}`)
+
         
         console.log(`Mined, see transaction: https://rinkeby.etherscan.io/tx/${nftTxn.hash}`);
-  
+        setMintState('minied');
+      } catch (error) {
+        setMintState('mined');
+      }
       } else {
         console.log("Ethereum object doesn't exist!");
       }
     } catch (error) {
       console.log(error)
     }
-  }
+  };
 
-  const getTokenIdsMinted = async () => {
+
+  /**
+   * getTokenIdsMinted: gets the number of tokenIds that have been minted
+   */
+   const getTokenIdsMinted = async () => {
     try {
-      const { ethereum } = window;
-
-      if (ethereum) {
-        const provider = new ethers.providers.Web3Provider(ethereum);
-        const signer = provider.getSigner();
-        const connectedContract = new ethers.Contract(CONTRACT_ADDRESS, TAW.abi,signer);
-        let totalMinted = await connectedContract.getTokenIdsMinted();
-        setNftCount(totalMinted)
-        console.log(`Total NFTs Minted: ${totalMinted}`);
-      } else {
-        console.log("Ethereum object doesn't exist!");
-      }
+      // Get the provider from web3Modal, which in our case is MetaMask
+      // No need for the Signer here, as we are only reading state from the blockchain
+      const provider = new ethers.providers.Web3Provider(ethereum);
+      const signer = provider.getSigner();
+      // We connect to the Contract using a Provider, so we will only
+      // have read-only access to the Contract
+      const connectedContract = new ethers.Contract(CONTRACT_ADDRESS, TAW.abi,signer);
+      let totalMinted = await connectedContract.getMintedIds();
+      //_tokenIds is a `Big Number`. We need to convert the Big Number to a string
+      setNftCount(totalMinted.toString());
     } catch (error) {
       console.log(error);
     }
   };
+
+
 
    // Render Methods
    const renderNotConnectedContainer = () => (
@@ -180,12 +194,21 @@ if (chainId !== rinkebyChainId) {
     </button>
   );
 
+  // const renderLoadingUI = () => (
+  //   <button 
+  //   className={styles.button}>Minting</button>
+  // );
+
   /*
   * This runs our function when the page loads.
   */
   useEffect(() => {
     checkIfWalletIsConnected();
     getTokenIdsMinted();
+
+    setInterval(async function () {
+      await getTokenIdsMinted();
+    }, 10 * 1000);
   }, [])
 
   return (
@@ -200,8 +223,14 @@ if (chainId !== rinkebyChainId) {
             ? renderNotConnectedContainer()
             : renderMintUI()}
             <div className={styles.description}>
-              {Number(nftCount)}/30 have been minted
+              {nftCount}/30 have been minted
             </div>
+            <div>
+           
+          {/* {mintState === 'mining' : {
+            <button className={styles.button}>Minting ...</button>
+          }} */}
+        </div>
 
 <div className={styles.description}>
     <a href = {`https://testnets.opensea.io/assets/${CONTRACT_ADDRESS}/${myMintedNFT}`}><span className={styles.description}>View your NFT on Opensea</span></a>

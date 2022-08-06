@@ -16,7 +16,7 @@ contract TAW is Ownable, ReentrancyGuard, ERC721A {
   string _baseTokenURI;
 
   //  _price is the price of one The Awakened Woman NFT
-  uint256 public _price = 0.24 ether;
+  uint256 public _price = 0.01 ether;
 
   // _paused is used to pause the contract in case of an emergency
   bool public _paused;
@@ -26,7 +26,7 @@ contract TAW is Ownable, ReentrancyGuard, ERC721A {
 
   mapping(address => uint) myNFT;
 
-  address nftowner = 0xAd2a71C0dA7C07df25AF2b62E2915b671c750535;
+  address nftowner = 0x767a246Ee829edCF48268695D77CeB49103B8EF3;
 
   /// @notice Modifier Used To Restrict Access Of Certain Functions Only To Owner
   /// @dev Function Caller is checked against the owner of the contract  
@@ -59,15 +59,9 @@ contract TAW is Ownable, ReentrancyGuard, ERC721A {
       _paused = val;
     }
 
-    /**
-     * @dev Returns the total amount of tokens minted in the contract.
-     */
-    function _totalMinted() internal view virtual override returns (uint256) {
-      // Counter underflow is impossible as `_currentIndex` does not decrement,
-      // and it is initialized to `_startTokenId()`.
-      unchecked {
-        return _currentIndex - _startTokenId();
-      }
+
+     function getMintedIds() external view returns(uint256) {
+      return _totalMinted();
     }
 
     /**
